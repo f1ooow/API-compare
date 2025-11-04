@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, Button, Drawer, Form, Input, InputNumber, Space, message, Popconfirm, Tag, Radio, Select, Collapse } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, GlobalOutlined, DollarOutlined, ApiOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useStore } from '../store/useStore';
-import { Provider, ChargeOption, Group, GroupModelPrice } from '../types';
+import { Provider, GroupModelPrice } from '../types';
 import { calculateExchangeRate, calculateActualPrice } from '../services/calculator';
 
 // 品牌颜色映射
@@ -237,58 +237,62 @@ export default function ProviderManager() {
         }
       >
         <Form form={form} layout="vertical">
-          <Collapse
-            defaultActiveKey={['basic']}
-            items={[
-              {
-                key: 'basic',
-                label: '基本信息',
-                children: (
-                  <>
-                    <Form.Item
-                      name="name"
-                      label="服务商名称"
-                      rules={[{ required: true, message: '请输入服务商名称' }]}
-                    >
-                      <Input placeholder="例如: OpenAI中转" />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="website"
-                      label="网址"
-                      rules={[{ required: true, message: '请输入网址' }]}
-                    >
-                      <Input placeholder="https://example.com" />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="notes"
-                      label="备注"
-                    >
-                      <Input.TextArea
-                        placeholder="可选，记录一些关于这个服务商的备注信息"
-                        rows={3}
-                      />
-                    </Form.Item>
-                  </>
-                ),
-              },
-              {
-                key: 'charge',
-                label: '充值方案',
-                children: <ChargeOptionsManager />,
-              },
-              {
-                key: 'groups',
-                label: '分组管理',
-                children: <GroupsManager models={models} />,
-              },
-            ]}
-          />
+          <CollapseForm models={models} />
         </Form>
       </Drawer>
     </div>
   );
+}
+
+// Collapse 表单组件（使用 useMemo 稳定引用）
+function CollapseForm({ models }: { models: any[] }) {
+  const collapseItems = useMemo(() => [
+    {
+      key: 'basic',
+      label: '基本信息',
+      children: (
+        <>
+          <Form.Item
+            name="name"
+            label="服务商名称"
+            rules={[{ required: true, message: '请输入服务商名称' }]}
+          >
+            <Input placeholder="例如: OpenAI中转" />
+          </Form.Item>
+
+          <Form.Item
+            name="website"
+            label="网址"
+            rules={[{ required: true, message: '请输入网址' }]}
+          >
+            <Input placeholder="https://example.com" />
+          </Form.Item>
+
+          <Form.Item
+            name="notes"
+            label="备注"
+          >
+            <Input.TextArea
+              placeholder="可选，记录一些关于这个服务商的备注信息"
+              rows={3}
+            />
+          </Form.Item>
+        </>
+      ),
+    },
+    {
+      key: 'charge',
+      label: '充值方案',
+      children: <ChargeOptionsManager />,
+    },
+    {
+      key: 'groups',
+      label: '分组管理',
+      children: <GroupsManager models={models} />,
+    },
+  ], [models]);
+
+  return <Collapse defaultActiveKey={['basic']} items={collapseItems} />;
 }
 
 // 充值方案管理组件
@@ -458,7 +462,6 @@ function GroupsManager({ models }: { models: any[] }) {
                       {...field}
                       name={[field.name, 'id']}
                       hidden
-                      initialValue={`group-${Date.now()}-${field.key}`}
                     >
                       <Input />
                     </Form.Item>

@@ -4,7 +4,7 @@ import { SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons
 import { useStore } from '../store/useStore';
 import { generatePriceComparison } from '../services/calculator';
 import type { ColumnsType, ColumnType, ColumnGroupType } from 'antd/es/table';
-import type { PriceComparisonRow, PriceCell } from '../types';
+import type { PriceComparisonRow } from '../types';
 
 // 服务商背景色
 const PROVIDER_COLORS = [
