@@ -27,5 +27,6 @@ dist-ssr
 out
 release
 
-# Data
-data
+# Data (Electron user data, not source code)
+/data
+electron/data
