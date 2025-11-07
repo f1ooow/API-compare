@@ -29,32 +29,40 @@ export default function ModelManager() {
     message.success('删除成功');
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
+  const handleModalClose = () => {
+    // 关闭时自动保存（如果表单有效）
+    form.validateFields()
+      .then((values) => {
+        const model: Model = {
+          id: editingModel?.id || `model-${Date.now()}`,
+          name: values.name,
+          provider: values.provider,
+          description: values.description,
+          inputPrice: values.inputPrice,
+          outputPrice: values.outputPrice,
+          updatedAt: values.updatedAt
+        };
 
-      const model: Model = {
-        id: editingModel?.id || `model-${Date.now()}`,
-        name: values.name,
-        provider: values.provider,
-        description: values.description,
-        inputPrice: values.inputPrice,
-        outputPrice: values.outputPrice,
-        updatedAt: values.updatedAt
-      };
+        if (editingModel) {
+          updateModel(model);
+        } else {
+          addModel(model);
+        }
 
-      if (editingModel) {
-        updateModel(model);
-        message.success('更新成功');
-      } else {
-        addModel(model);
-        message.success('添加成功');
-      }
-
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error('Validation failed:', error);
-    }
+        setIsModalOpen(false);
+      })
+      .catch(() => {
+        // 验证失败，询问用户是否放弃修改
+        Modal.confirm({
+          title: '表单未完成',
+          content: '表单还有必填项未填写，是否放弃修改？',
+          okText: '放弃',
+          cancelText: '继续编辑',
+          onOk: () => {
+            setIsModalOpen(false);
+          }
+        });
+      });
   };
 
   const columns: ColumnsType<Model> = [
@@ -165,11 +173,9 @@ export default function ModelManager() {
       <Modal
         title={editingModel ? '编辑模型' : '添加模型'}
         open={isModalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={handleModalClose}
         width={600}
-        okText="保存"
-        cancelText="取消"
+        footer={null}
       >
         <Form form={form} layout="vertical">
           <Form.Item

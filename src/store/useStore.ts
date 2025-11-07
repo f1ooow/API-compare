@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { debounce } from 'lodash-es';
 import { AppData, Provider, Model } from '../types';
 import { storageService } from '../services/storage';
 
@@ -16,6 +17,11 @@ interface AppStore extends AppData {
   importData: (jsonData: string) => Promise<void>;
 }
 
+// Create a debounced save function (1 second delay)
+const debouncedSave = debounce(async (data: AppData) => {
+  await storageService.saveData(data);
+}, 1000);
+
 export const useStore = create<AppStore>((set, get) => ({
   providers: [],
   models: [],
@@ -27,7 +33,7 @@ export const useStore = create<AppStore>((set, get) => ({
 
   saveData: async () => {
     const { providers, models } = get();
-    await storageService.saveData({ providers, models });
+    debouncedSave({ providers, models });
   },
 
   addProvider: (provider) => {

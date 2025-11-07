@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Table, Select, Space, Card, Empty, Tag, Input } from 'antd';
-import { SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
+import { Table, Select, Space, Card, Empty, Tag, Input, Modal, Descriptions } from 'antd';
+import { SortAscendingOutlined, SortDescendingOutlined, GlobalOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useStore } from '../store/useStore';
-import { generatePriceComparison } from '../services/calculator';
+import { generatePriceComparison, calculateExchangeRate } from '../services/calculator';
 import type { ColumnsType, ColumnType, ColumnGroupType } from 'antd/es/table';
-import type { PriceComparisonRow } from '../types';
+import type { PriceComparisonRow, Provider } from '../types';
 
 // 服务商背景色
 const PROVIDER_COLORS = [
@@ -26,6 +26,8 @@ export default function PriceComparison() {
   const [searchModel, setSearchModel] = useState('');
   const [sortModelName, setSortModelName] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
 
   // 生成比价数据
   const comparisonData = useMemo(() => {
@@ -164,6 +166,15 @@ export default function PriceComparison() {
       // 新模型，设置为升序
       setSortModelName(modelName);
       setSortOrder('ascend');
+    }
+  };
+
+  // 处理服务商列头点击
+  const handleProviderClick = (providerName: string) => {
+    const provider = providers.find((p) => p.name === providerName);
+    if (provider) {
+      setSelectedProvider(provider);
+      setShowProviderModal(true);
     }
   };
 
@@ -351,7 +362,28 @@ export default function PriceComparison() {
       return [
         {
           title: (
-            <div style={{ fontWeight: 'bold', fontSize: 14, textAlign: 'center' }}>
+            <div
+              style={{
+                fontWeight: 'bold',
+                fontSize: 14,
+                textAlign: 'center',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                transition: 'all 0.2s'
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleProviderClick(group.providerName);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(24, 144, 255, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <InfoCircleOutlined style={{ marginRight: 6, fontSize: 12 }} />
               {group.providerName}
             </div>
           ),
@@ -405,7 +437,7 @@ export default function PriceComparison() {
       ) : (
         <Card>
           <div style={{ marginBottom: 12, color: '#888', fontSize: 13 }}>
-            💡 价格单位: 人民币/美元 per 1M tokens | <span style={{ background: '#d9f7be', padding: '2px 6px', borderRadius: 3 }}>绿色背景</span> 表示最优价格 | 点击模型名可排序并聚焦该模型 | 再次点击取消排序
+            💡 价格单位: 人民币/美元 per 1M tokens | <span style={{ background: '#d9f7be', padding: '2px 6px', borderRadius: 3 }}>绿色背景</span> 表示最优价格 | 点击模型名可排序并聚焦该模型 | <span style={{ color: '#1890ff', fontWeight: 500 }}>点击服务商列头</span>查看详细信息
           </div>
           <Table
             columns={columns}
@@ -418,6 +450,75 @@ export default function PriceComparison() {
           />
         </Card>
       )}
+
+      {/* 服务商信息弹窗 */}
+      <Modal
+        title={
+          <div>
+            <InfoCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            服务商信息
+          </div>
+        }
+        open={showProviderModal}
+        onCancel={() => setShowProviderModal(false)}
+        footer={null}
+        width={600}
+      >
+        {selectedProvider && (
+          <div>
+            <Descriptions column={1} bordered>
+              <Descriptions.Item label="名称">
+                <strong style={{ fontSize: 16 }}>{selectedProvider.name}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="网址">
+                <a
+                  href={selectedProvider.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <GlobalOutlined />
+                  {selectedProvider.website}
+                </a>
+              </Descriptions.Item>
+              <Descriptions.Item label="充值方案">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {selectedProvider.chargeOptions.map((option) => (
+                    <div key={option.id} style={{ padding: '8px 12px', background: '#f5f5f5', borderRadius: 4 }}>
+                      <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                        {option.name}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#666' }}>
+                        充值 ¥{option.cny} = ${option.usd}
+                        <Tag color="green" style={{ marginLeft: 8 }}>
+                          汇率: ¥{calculateExchangeRate(option).toFixed(4)}/USD
+                        </Tag>
+                      </div>
+                    </div>
+                  ))}
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="分组数量">
+                <Tag color="blue">{selectedProvider.groups.length} 个分组</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="支持模型数">
+                <Tag color="purple">
+                  {selectedProvider.groups.reduce(
+                    (sum, group) => sum + Object.keys(group.models).length,
+                    0
+                  )}{' '}
+                  个模型
+                </Tag>
+              </Descriptions.Item>
+              {selectedProvider.notes && (
+                <Descriptions.Item label="备注">
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{selectedProvider.notes}</div>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

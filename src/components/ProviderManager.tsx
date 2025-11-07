@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, Button, Drawer, Form, Input, InputNumber, Space, message, Popconfirm, Tag, Radio, Select, Collapse } from 'antd';
+import { Card, Button, Drawer, Form, Input, InputNumber, Space, message, Popconfirm, Tag, Radio, Select, Collapse, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, GlobalOutlined, DollarOutlined, ApiOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useStore } from '../store/useStore';
 import { Provider, GroupModelPrice } from '../types';
@@ -48,31 +48,39 @@ export default function ProviderManager() {
     message.success('删除成功');
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
+  const handleDrawerClose = () => {
+    // 关闭时自动保存（如果表单有效）
+    form.validateFields()
+      .then((values) => {
+        const provider: Provider = {
+          id: editingProvider?.id || `provider-${Date.now()}`,
+          name: values.name,
+          website: values.website,
+          notes: values.notes,
+          chargeOptions: values.chargeOptions || [],
+          groups: values.groups || []
+        };
 
-      const provider: Provider = {
-        id: editingProvider?.id || `provider-${Date.now()}`,
-        name: values.name,
-        website: values.website,
-        notes: values.notes,
-        chargeOptions: values.chargeOptions || [],
-        groups: values.groups || []
-      };
+        if (editingProvider) {
+          updateProvider(provider);
+        } else {
+          addProvider(provider);
+        }
 
-      if (editingProvider) {
-        updateProvider(provider);
-        message.success('更新成功');
-      } else {
-        addProvider(provider);
-        message.success('添加成功');
-      }
-
-      setIsDrawerOpen(false);
-    } catch (error) {
-      console.error('Validation failed:', error);
-    }
+        setIsDrawerOpen(false);
+      })
+      .catch(() => {
+        // 验证失败，询问用户是否放弃修改
+        Modal.confirm({
+          title: '表单未完成',
+          content: '表单还有必填项未填写，是否放弃修改？',
+          okText: '放弃',
+          cancelText: '继续编辑',
+          onOk: () => {
+            setIsDrawerOpen(false);
+          }
+        });
+      });
   };
 
   // 获取服务商支持的模型品牌
@@ -227,14 +235,8 @@ export default function ProviderManager() {
       <Drawer
         title={editingProvider ? '编辑服务商' : '添加服务商'}
         open={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+        onClose={handleDrawerClose}
         width={720}
-        extra={
-          <Space>
-            <Button onClick={() => setIsDrawerOpen(false)}>取消</Button>
-            <Button type="primary" onClick={handleSubmit}>保存</Button>
-          </Space>
-        }
       >
         <Form form={form} layout="vertical">
           <CollapseForm models={models} />
