@@ -72,9 +72,28 @@ export const useStore = create<AppStore>((set, get) => ({
   },
 
   deleteModel: (id) => {
-    set((state) => ({
-      models: state.models.filter((m) => m.id !== id)
-    }));
+    set((state) => {
+      // 删除模型
+      const newModels = state.models.filter((m) => m.id !== id);
+
+      // 同时从所有服务商的分组中移除该模型的引用
+      const newProviders = state.providers.map((provider) => ({
+        ...provider,
+        groups: provider.groups.map((group) => {
+          // 从 models 对象中移除该模型ID
+          const { [id]: removedModel, ...remainingModels } = group.models;
+          return {
+            ...group,
+            models: remainingModels
+          };
+        })
+      }));
+
+      return {
+        models: newModels,
+        providers: newProviders
+      };
+    });
     get().saveData();
   },
 

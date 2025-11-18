@@ -30,7 +30,14 @@ export default function ModelManager() {
   };
 
   const handleModalClose = () => {
-    // 关闭时自动保存（如果表单有效）
+    // 检查表单是否被修改过
+    if (!form.isFieldsTouched()) {
+      // 未修改，直接关闭
+      setIsModalOpen(false);
+      return;
+    }
+
+    // 表单已修改，执行保存逻辑
     form.validateFields()
       .then((values) => {
         const model: Model = {

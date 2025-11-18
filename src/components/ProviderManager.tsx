@@ -49,7 +49,14 @@ export default function ProviderManager() {
   };
 
   const handleDrawerClose = () => {
-    // 关闭时自动保存（如果表单有效）
+    // 检查表单是否被修改过
+    if (!form.isFieldsTouched()) {
+      // 未修改，直接关闭
+      setIsDrawerOpen(false);
+      return;
+    }
+
+    // 表单已修改，执行保存逻辑
     form.validateFields()
       .then((values) => {
         const provider: Provider = {
@@ -57,8 +64,9 @@ export default function ProviderManager() {
           name: values.name,
           website: values.website,
           notes: values.notes,
-          chargeOptions: values.chargeOptions || [],
-          groups: values.groups || []
+          // 使用表单值，如果为空则使用原始数据作为后备
+          chargeOptions: values.chargeOptions || editingProvider?.chargeOptions || [],
+          groups: values.groups || editingProvider?.groups || []
         };
 
         if (editingProvider) {
